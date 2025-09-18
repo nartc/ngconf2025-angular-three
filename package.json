@@ -1,39 +1,70 @@
 {
-  "name": "base",
-  "version": "0.0.0",
-  "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development"
-  },
-  "prettier": {
-    "printWidth": 100,
-    "singleQuote": true,
-    "overrides": [
-      {
-        "files": "*.html",
-        "options": {
-          "parser": "angular"
-        }
-      }
-    ]
-  },
-  "private": true,
-  "dependencies": {
-    "@angular/common": "^20.3.0",
-    "@angular/compiler": "^20.3.0",
-    "@angular/core": "^20.3.0",
-    "@angular/forms": "^20.3.0",
-    "@angular/platform-browser": "^20.3.0",
-    "@angular/router": "^20.3.0",
-    "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
-  },
-  "devDependencies": {
-    "@angular/build": "^20.3.2",
-    "@angular/cli": "^20.3.2",
-    "@angular/compiler-cli": "^20.3.0",
-    "typescript": "~5.9.2"
-  }
+	"name": "base",
+	"version": "0.0.0",
+	"scripts": {
+		"ng": "ng",
+		"start": "ng serve",
+		"build": "ng build",
+		"watch": "ng build --watch --configuration development"
+	},
+	"prettier": {
+		"printWidth": 120,
+		"tabWidth": 4,
+		"singleQuote": true,
+		"trailingComma": "all",
+		"htmlWhitespaceSensitivity": "ignore",
+		"useTabs": true,
+		"plugins": [
+			"prettier-plugin-organize-imports",
+			"prettier-plugin-tailwindcss"
+		],
+		"overrides": [
+			{
+				"files": "*.html",
+				"options": {
+					"parser": "angular"
+				}
+			}
+		]
+	},
+	"private": true,
+	"dependencies": {
+		"@angular/common": "^20.3.0",
+		"@angular/compiler": "^20.3.0",
+		"@angular/core": "^20.3.0",
+		"@angular/forms": "^20.3.0",
+		"@angular/platform-browser": "^20.3.0",
+		"@angular/router": "^20.3.0",
+		"@monogrid/gainmap-js": "^3.0.0",
+		"@pmndrs/vanilla": "^1.20.0",
+		"angular-three": "next",
+		"angular-three-soba": "next",
+		"camera-controls": "^2.8.0",
+		"hls.js": "^1.5.0",
+		"maath": "~0.10.0",
+		"meshline": "^3.1.0",
+		"ngxtension": "^5.0.0",
+		"rxjs": "~7.8.0",
+		"stats-gl": "^2.0.0",
+		"three": "^0.178.0",
+		"three-custom-shader-material": "~6.3.0",
+		"three-mesh-bvh": "~0.9.0",
+		"three-stdlib": "^2.0.0",
+		"troika-three-text": "~0.52.0",
+		"tslib": "^2.3.0"
+	},
+	"devDependencies": {
+		"@angular/build": "^20.3.2",
+		"@angular/cli": "^20.3.2",
+		"@angular/compiler-cli": "^20.3.0",
+		"@tailwindcss/postcss": "^4.1.13",
+		"@types/three": "^0.178.0",
+		"angular-three-plugin": "^4.0.0-next.115",
+		"postcss": "^8.5.6",
+		"prettier": "^3.6.2",
+		"prettier-plugin-organize-imports": "^4.3.0",
+		"prettier-plugin-tailwindcss": "^0.6.14",
+		"tailwindcss": "^4.1.13",
+		"typescript": "~5.9.2"
+	}
 }
