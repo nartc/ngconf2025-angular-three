@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
+import { ThreeVanillaCanvas } from './three-vanilla/three-vanilla-canvas';
 
 @Component({
 	selector: 'app-root',
 	template: `
-		<h1>Welcome to {{ title() }}!</h1>
+		<app-three-vanilla-canvas />
 	`,
-	styles: [],
+	imports: [ThreeVanillaCanvas],
+	host: { class: 'block h-dvh w-full' },
 })
 export class App {}
