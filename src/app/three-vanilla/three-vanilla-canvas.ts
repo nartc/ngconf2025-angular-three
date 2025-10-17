@@ -27,7 +27,8 @@ import { OrbitControls } from 'three-stdlib';
 export class ThreeVanillaCanvas {
 	private readonly document = inject(DOCUMENT);
 	private readonly destroyRef = inject(DestroyRef);
-	private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+	private readonly canvasRef =
+		viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
 
 	private scene!: THREE.Scene;
 	private camera!: THREE.PerspectiveCamera;
@@ -42,7 +43,9 @@ export class ThreeVanillaCanvas {
 	private isScaled = signal(false);
 	private animationId?: number;
 
-	private readonly cubeColor = computed(() => (this.isHovered() ? 'hotpink' : 'orange'));
+	private readonly cubeColor = computed(() =>
+		this.isHovered() ? 'hotpink' : 'orange',
+	);
 	private readonly cubeScale = computed(() => (this.isScaled() ? 1.5 : 1));
 
 	constructor() {
@@ -55,7 +58,9 @@ export class ThreeVanillaCanvas {
 		effect(() => {
 			const color = this.cubeColor();
 			if (this.cube && this.cube.material) {
-				(this.cube.material as THREE.MeshStandardMaterial).color.set(color);
+				(this.cube.material as THREE.MeshStandardMaterial).color.set(
+					color,
+				);
 			}
 		});
 
@@ -102,7 +107,12 @@ export class ThreeVanillaCanvas {
 		this.scene = new THREE.Scene();
 
 		// Camera
-		this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+		this.camera = new THREE.PerspectiveCamera(
+			75,
+			width / height,
+			0.1,
+			1000,
+		);
 		this.camera.position.set(5, 5, 5);
 		this.camera.lookAt(0, 0, 0);
 
@@ -112,11 +122,15 @@ export class ThreeVanillaCanvas {
 		this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 		this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 		this.renderer.setSize(width, height, false);
-		this.renderer.setPixelRatio(Math.min(this.document.defaultView?.devicePixelRatio || 1, 2));
+		this.renderer.setPixelRatio(
+			Math.min(this.document.defaultView?.devicePixelRatio || 1, 2),
+		);
 
 		// Cube
 		const geometry = new THREE.BoxGeometry();
-		const material = new THREE.MeshStandardMaterial({ color: this.cubeColor() });
+		const material = new THREE.MeshStandardMaterial({
+			color: this.cubeColor(),
+		});
 		this.cube = new THREE.Mesh(geometry, material);
 		this.scene.add(this.cube);
 
@@ -158,7 +172,8 @@ export class ThreeVanillaCanvas {
 		const updatePointer = (event: MouseEvent) => {
 			const rect = canvas.getBoundingClientRect();
 			this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-			this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+			this.pointer.y =
+				-((event.clientY - rect.top) / rect.height) * 2 + 1;
 		};
 
 		canvas.addEventListener(
@@ -176,7 +191,10 @@ export class ThreeVanillaCanvas {
 				updatePointer(event);
 
 				this.raycaster.setFromCamera(this.pointer, this.camera);
-				const intersects = this.raycaster.intersectObject(this.cube, false);
+				const intersects = this.raycaster.intersectObject(
+					this.cube,
+					false,
+				);
 
 				if (intersects.length > 0) {
 					this.isScaled.update((current) => !current);

@@ -1,7 +1,81 @@
-import { ChangeDetectionStrategy, Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { extend } from 'angular-three';
+import {
+	ChangeDetectionStrategy,
+	Component,
+	computed,
+	CUSTOM_ELEMENTS_SCHEMA,
+	Directive,
+	DOCUMENT,
+	ElementRef,
+	inject,
+	input,
+	model,
+	signal,
+	viewChild,
+} from '@angular/core';
+import { beforeRender, extend, NgtVector3 } from 'angular-three';
 import { NgtsPerspectiveCamera } from 'angular-three-soba/cameras';
+import { NgtsOrbitControls } from 'angular-three-soba/controls';
 import * as THREE from 'three';
+
+@Directive({
+	selector: 'ngt-mesh[cursor]',
+	host: {
+		'(pointerover)': 'onPointerOver()',
+		'(pointerout)': 'onPointerOver()',
+	},
+})
+export class Cursor {
+	private document = inject(DOCUMENT);
+
+	protected onPointerOver() {
+		this.document.body.style.cursor = 'pointer';
+	}
+
+	protected onPointerOut() {
+		this.document.body.style.cursor = 'default';
+	}
+}
+
+@Component({
+	selector: 'app-box',
+	template: `
+		<ngt-mesh
+			#mesh
+			cursor
+			[position]="position()"
+			(pointerover)="color.set('hotpink')"
+			(pointerout)="color.set('orange')"
+			(click)="active.set(!active())"
+			[scale]="scale()"
+		>
+			<ngt-box-geometry />
+			<ng-content>
+				<ngt-mesh-basic-material [color]="color()" />
+			</ng-content>
+		</ngt-mesh>
+	`,
+
+	imports: [Cursor],
+	changeDetection: ChangeDetectionStrategy.OnPush,
+	schemas: [CUSTOM_ELEMENTS_SCHEMA],
+})
+export class Box {
+	position = input<NgtVector3>();
+	active = model(false);
+
+	protected color = signal('orange');
+	protected scale = computed(() => (this.active() ? 1.5 : 1));
+
+	private meshRef = viewChild.required<ElementRef<THREE.Mesh>>('mesh');
+
+	constructor() {
+		beforeRender(() => {
+			const mesh = this.meshRef().nativeElement;
+			mesh.rotation.x += 0.01;
+			mesh.rotation.y += 0.01;
+		});
+	}
+}
 
 @Component({
 	selector: 'app-scene-graph',
@@ -11,16 +85,31 @@ import * as THREE from 'three';
 			(updated)="$event.lookAt(0, 0, 0)"
 		/>
 
-		<ngt-mesh>
-			<ngt-box-geometry />
-			<ngt-mesh-basic-material />
-		</ngt-mesh>
+		<ngt-ambient-light [intensity]="Math.PI * 0.5" />
+		<ngt-directional-light [intensity]="Math.PI * 0.5" [position]="5" />
+
+		<app-box [position]="[1.5, 0, 0]" [(active)]="activeOne" />
+		<app-box [position]="[-1.5, 0, 0]" [(active)]="activeTwo" />
+
+		@if (activeOne() && activeTwo()) {
+			<app-box [position]="[0, 2, 0]">
+				<ngt-mesh-normal-material />
+			</app-box>
+		}
+
+		<ngt-grid-helper />
+		<ngts-orbit-controls [options]="{ dampingFactor: 0.05 }" />
 	`,
-	imports: [NgtsPerspectiveCamera],
+	imports: [NgtsPerspectiveCamera, NgtsOrbitControls, Box],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class SceneGraph {
+	protected readonly Math = Math;
+
+	protected activeOne = signal(false);
+	protected activeTwo = signal(false);
+
 	constructor() {
 		extend(THREE);
 	}
