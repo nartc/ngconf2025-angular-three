@@ -74,8 +74,8 @@ export class ManyBoxes {
 
 	// not a signal because we're updating this in a loop
 	private animationProgress = 0;
-	private animationState = signal<'cube' | 'animating' | 'logo'>('cube');
-	private isAnimating = computed(() => this.animationState() === 'animating');
+	private animationState = signal<'cube' | 'animating' | 'logo' | 'animating-thanks' | 'thanks'>('cube');
+	private isAnimating = computed(() => this.animationState() === 'animating' || this.animationState() === 'animating-thanks');
 
 	protected uniforms = {
 		uPositions: { value: null },
@@ -114,7 +114,13 @@ export class ManyBoxes {
 	constructor() {
 		beforeRender(({ clock, gl, delta }) => {
 			const shaderMaterial = this.shaderMaterialRef()?.nativeElement;
-			if (!shaderMaterial) return;
+			const instancedMesh = this.instancedMeshRef()?.nativeElement;
+			if (!shaderMaterial || !instancedMesh) return;
+
+			// Determine animation phase: 0 for cube→logo, 1 for logo→thanks
+			const currentState = this.animationState();
+			const animationPhase =
+				currentState === 'animating-thanks' || currentState === 'thanks' ? 1 : 0;
 
 			this.simulationMaterial.uniforms['uFrequency'].value = 0.5;
 			this.simulationMaterial.uniforms['uTime'].value = clock.elapsedTime;
@@ -122,6 +128,7 @@ export class ManyBoxes {
 				this.isAnimating();
 			this.simulationMaterial.uniforms['uAnimationProgress'].value =
 				this.animationProgress;
+			this.simulationMaterial.uniforms['uAnimationPhase'].value = animationPhase;
 
 			const currentRenderTarget = gl.getRenderTarget();
 			gl.setRenderTarget(this.renderTarget);
@@ -132,14 +139,34 @@ export class ManyBoxes {
 			shaderMaterial.uniforms['uPositions'].value =
 				this.renderTarget.texture;
 
+			// Smooth position transition for THANK YOU centering
+			const startPos = new THREE.Vector3(-1, -1, 0);
+			const thanksPos = new THREE.Vector3(0, -1, 0); // Centered position for THANK YOU
+
+			if (currentState === 'animating-thanks') {
+				// Smoothly lerp to centered position during animation
+				const smoothProgress = THREE.MathUtils.smoothstep(this.animationProgress, 0, 1);
+				instancedMesh.position.lerpVectors(startPos, thanksPos, smoothProgress);
+			} else if (currentState === 'thanks') {
+				// Hold at centered position
+				instancedMesh.position.copy(thanksPos);
+			} else {
+				// Default position for cube and logo states
+				instancedMesh.position.copy(startPos);
+			}
+
 			this.groupRef().nativeElement.rotation.y += delta * 0.05;
 		});
 
 		beforeRender(({ delta }) => {
-			if (this.animationState() !== 'animating') return;
+			const currentState = this.animationState();
+			if (currentState !== 'animating' && currentState !== 'animating-thanks') return;
+
 			this.animationProgress += delta / 5; // 5s
 			if (this.animationProgress < 1) return;
-			this.animationState.set('logo');
+
+			// Set final state based on which animation just completed
+			this.animationState.set(currentState === 'animating' ? 'logo' : 'thanks');
 			this.animationProgress = 1;
 		});
 
@@ -167,8 +194,12 @@ export class ManyBoxes {
 		if ($event.code !== 'Space') return;
 
 		$event.preventDefault();
-		if (this.animationState() === 'cube') {
+		const currentState = this.animationState();
+		if (currentState === 'cube') {
 			this.animationState.set('animating');
+		} else if (currentState === 'logo') {
+			this.animationProgress = 0; // Reset progress for second animation
+			this.animationState.set('animating-thanks');
 		}
 	}
 }

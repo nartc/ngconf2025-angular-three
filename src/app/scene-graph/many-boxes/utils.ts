@@ -120,10 +120,130 @@ function createLogoPositions(size: number) {
 	return data;
 }
 
+function createThankYouPositions(size: number) {
+	const data = new Float32Array(size * size * 4);
+
+	// Define simple block letter patterns (5x5 grid for each letter)
+	// 1 = particle, 0 = empty
+	const letters: Record<string, number[][]> = {
+		'T': [
+			[1, 1, 1, 1, 1],
+			[0, 0, 1, 0, 0],
+			[0, 0, 1, 0, 0],
+			[0, 0, 1, 0, 0],
+			[0, 0, 1, 0, 0],
+		],
+		'H': [
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[1, 1, 1, 1, 1],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+		],
+		'A': [
+			[0, 1, 1, 1, 0],
+			[1, 0, 0, 0, 1],
+			[1, 1, 1, 1, 1],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+		],
+		'N': [
+			[1, 0, 0, 0, 1],
+			[1, 1, 0, 0, 1],
+			[1, 0, 1, 0, 1],
+			[1, 0, 0, 1, 1],
+			[1, 0, 0, 0, 1],
+		],
+		'K': [
+			[1, 0, 0, 1, 0],
+			[1, 0, 1, 0, 0],
+			[1, 1, 0, 0, 0],
+			[1, 0, 1, 0, 0],
+			[1, 0, 0, 1, 0],
+		],
+		'Y': [
+			[1, 0, 0, 0, 1],
+			[0, 1, 0, 1, 0],
+			[0, 0, 1, 0, 0],
+			[0, 0, 1, 0, 0],
+			[0, 0, 1, 0, 0],
+		],
+		'O': [
+			[0, 1, 1, 1, 0],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[0, 1, 1, 1, 0],
+		],
+		'U': [
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 1],
+			[0, 1, 1, 1, 0],
+		],
+	};
+
+	const text = 'THANKYOU'; // No space for better layout
+	const letterSpacing = 0.3;
+	const particleSize = 0.08;
+	const scale = 0.6;
+
+	// Collect all particle positions for letters
+	const positions: Array<{ x: number; y: number; z: number }> = [];
+
+	let currentX = 0;
+	for (const char of text) {
+		const pattern = letters[char];
+		if (!pattern) continue;
+
+		for (let row = 0; row < 5; row++) {
+			for (let col = 0; col < 5; col++) {
+				if (pattern[row][col] === 1) {
+					positions.push({
+						x: (currentX + col * particleSize) * scale,
+						y: (2 - row * particleSize) * scale,
+						z: 0,
+					});
+				}
+			}
+		}
+		currentX += 5 * particleSize + letterSpacing;
+	}
+
+	// Center the text
+	const totalWidth = currentX - letterSpacing;
+	const offsetX = -totalWidth * scale / 2;
+
+	// Distribute all particles to spell out the text
+	// Remaining particles can be scattered or duplicated
+	for (let i = 0; i < data.length; i += 4) {
+		const posIndex = i / 4;
+
+		if (posIndex < positions.length) {
+			// Use defined letter positions
+			data[i] = positions[posIndex].x + offsetX;
+			data[i + 1] = positions[posIndex].y;
+			data[i + 2] = positions[posIndex].z;
+		} else {
+			// For extra particles, randomly distribute them in the text area
+			const randomPos = positions[Math.floor(Math.random() * positions.length)];
+			const jitter = 0.05;
+			data[i] = randomPos.x + offsetX + (Math.random() - 0.5) * jitter;
+			data[i + 1] = randomPos.y + (Math.random() - 0.5) * jitter;
+			data[i + 2] = randomPos.z + (Math.random() - 0.5) * jitter;
+		}
+		data[i + 3] = 1.0;
+	}
+
+	return data;
+}
+
 export function createSimulationMaterial(size: number) {
 	// Create cube grid positions as starting point
 	const cubeData = createCubePositions(size);
 	const logoData = createLogoPositions(size);
+	const thanksData = createThankYouPositions(size);
 
 	// Create textures for all three states
 	const cubeTexture = new THREE.DataTexture(
@@ -144,6 +264,15 @@ export function createSimulationMaterial(size: number) {
 	);
 	logoTexture.needsUpdate = true;
 
+	const thanksTexture = new THREE.DataTexture(
+		thanksData,
+		size,
+		size,
+		THREE.RGBAFormat,
+		THREE.FloatType,
+	);
+	thanksTexture.needsUpdate = true;
+
 	// Start with cube positions as current positions
 	const positionsTexture = cubeTexture.clone();
 
@@ -159,10 +288,12 @@ export function createSimulationMaterial(size: number) {
         uniform sampler2D positions;
         uniform sampler2D cubePositions;
         uniform sampler2D logoPositions;
+        uniform sampler2D thanksPositions;
         uniform float uTime;
         uniform float uFrequency;
         uniform float uAnimationProgress;
         uniform bool uIsAnimating;
+        uniform int uAnimationPhase; // 0 = cube→logo, 1 = logo→thanks
         varying vec2 vUv;
 
         // Simplex noise implementation
@@ -273,15 +404,20 @@ export function createSimulationMaterial(size: number) {
         void main() {
             vec3 cubePos = texture2D(cubePositions, vUv).rgb;
             vec3 logoPos = texture2D(logoPositions, vUv).rgb;
+            vec3 thanksPos = texture2D(thanksPositions, vUv).rgb;
 
             vec3 finalPos;
 
+            // Determine start and target positions based on animation phase
+            vec3 startPos = uAnimationPhase == 0 ? cubePos : logoPos;
+            vec3 targetPos = uAnimationPhase == 0 ? logoPos : thanksPos;
+
             if (!uIsAnimating && uAnimationProgress == 0.0) {
-                // Static cube formation - initial state
-                finalPos = cubePos;
+                // Static state - show start position
+                finalPos = startPos;
             } else if (!uIsAnimating && uAnimationProgress >= 1.0) {
-                // Static logo formation - final state
-                finalPos = logoPos;
+                // Static state - show target position
+                finalPos = targetPos;
             } else {
                 // Animation in progress - smooth continuous transition
 
@@ -289,33 +425,33 @@ export function createSimulationMaterial(size: number) {
                 float animTime = uTime * 0.1 * smoothstep(0.0, 0.15, uAnimationProgress);
 
                 // Calculate curl noise with smoother time progression
-                vec3 noise1 = curlNoise(cubePos * uFrequency + animTime) * 0.3;
-                vec3 noise2 = curlNoise(cubePos * uFrequency * 2.5 + animTime * 0.6) * 0.2;
+                vec3 noise1 = curlNoise(startPos * uFrequency + animTime) * 0.3;
+                vec3 noise2 = curlNoise(startPos * uFrequency * 2.5 + animTime * 0.6) * 0.2;
 
                 // Ultra-smooth intensity curves with extended ramp
                 float noiseIntensity;
-                float logoMixFactor;
+                float targetMixFactor;
 
                 if (uAnimationProgress < 0.7) {
                     // Extended smooth ramp up with double smoothstep for ultra-smooth start
                     float rampProgress = uAnimationProgress / 0.7;
                     float ultraSmooth = smoothstep(0.0, 1.0, smoothstep(0.0, 1.0, rampProgress));
                     noiseIntensity = ultraSmooth * 0.8;
-                    logoMixFactor = 0.0;
+                    targetMixFactor = 0.0;
                 } else {
-                    // Final phase - smooth transition to logo
-                    float logoProgress = (uAnimationProgress - 0.7) / 0.3;
-                    float smoothLogoProgress = smoothstep(0.0, 1.0, logoProgress);
+                    // Final phase - smooth transition to target
+                    float targetProgress = (uAnimationProgress - 0.7) / 0.3;
+                    float smoothTargetProgress = smoothstep(0.0, 1.0, targetProgress);
 
-                    noiseIntensity = 0.8 * (1.0 - smoothLogoProgress);
-                    logoMixFactor = smoothstep(0.0, 1.0, smoothLogoProgress);
+                    noiseIntensity = 0.8 * (1.0 - smoothTargetProgress);
+                    targetMixFactor = smoothstep(0.0, 1.0, smoothTargetProgress);
                 }
 
                 // Apply noise with guaranteed smooth intensity
-                vec3 noisyPos = cubePos + noise1 * noiseIntensity + noise2 * (noiseIntensity * 0.5);
+                vec3 noisyPos = startPos + noise1 * noiseIntensity + noise2 * (noiseIntensity * 0.5);
 
-                // Final smooth blend to logo position
-                finalPos = mix(noisyPos, logoPos, logoMixFactor);
+                // Final smooth blend to target position
+                finalPos = mix(noisyPos, targetPos, targetMixFactor);
             }
 
             gl_FragColor = vec4(finalPos, 1.0);
@@ -327,10 +463,12 @@ export function createSimulationMaterial(size: number) {
 			positions: { value: positionsTexture },
 			cubePositions: { value: cubeTexture },
 			logoPositions: { value: logoTexture },
+			thanksPositions: { value: thanksTexture },
 			uFrequency: { value: 0.5 },
 			uTime: { value: 0 },
 			uAnimationProgress: { value: 0.0 }, // 0 = start, 1 = complete
 			uIsAnimating: { value: false },
+			uAnimationPhase: { value: 0 }, // 0 = cube→logo, 1 = logo→thanks
 		},
 		vertexShader: simulationVertexShader,
 		fragmentShader: simulationFragmentShader,
