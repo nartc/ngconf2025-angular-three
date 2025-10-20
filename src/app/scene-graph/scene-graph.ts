@@ -16,6 +16,7 @@ import { beforeRender, extend, NgtVector3 } from 'angular-three';
 import { NgtsPerspectiveCamera } from 'angular-three-soba/cameras';
 import { NgtsOrbitControls } from 'angular-three-soba/controls';
 import * as THREE from 'three';
+import { ManyBoxes } from './many-boxes/many-boxes';
 
 @Directive({
 	selector: 'ngt-mesh[cursor]',
@@ -91,22 +92,9 @@ export class Box {
 			(updated)="$event.lookAt(0, 0, 0)"
 		/>
 
-		<ngt-ambient-light [intensity]="Math.PI * 0.5" />
-		<ngt-directional-light [intensity]="Math.PI * 0.5" [position]="5" />
-
-		<app-box [position]="[1.5, 0, 0]" [(active)]="activeOne" />
-		<app-box [position]="[-1.5, 0, 0]" [(active)]="activeTwo" />
-
-		@if (activeOne() && activeTwo()) {
-			<app-box [position]="[0, 2, 0]">
-				<ngt-mesh-normal-material />
-			</app-box>
-		}
-
-		<ngt-grid-helper />
-		<ngts-orbit-controls [options]="{ dampingFactor: 0.05 }" />
+		<app-many-boxes />
 	`,
-	imports: [NgtsPerspectiveCamera, NgtsOrbitControls, Box],
+	imports: [NgtsPerspectiveCamera, NgtsOrbitControls, Box, ManyBoxes],
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
